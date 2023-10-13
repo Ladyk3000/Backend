@@ -1,20 +1,16 @@
 import sqlite3
 import json
 
-# Откройте файл для чтения JSON-данных
-with open('Data/offices.txt', 'r', encoding='utf-8') as file:
+with open('../Data/offices.txt', 'r', encoding='utf-8') as file:
     data = file.read()
 
-# Разбор JSON-данных
 offices_data = json.loads(data)
 
-# Подключитесь к базе данных (если файл не существует, он будет создан)
-conn = sqlite3.connect("bank_branches.db")
+conn = sqlite3.connect("../Database/banking.db")
 cursor = conn.cursor()
 
-# Создайте таблицу для хранения данных
 cursor.execute('''
-    CREATE TABLE IF NOT EXISTS bank_branches (
+    CREATE TABLE IF NOT EXISTS bank_offices (
         id INTEGER PRIMARY KEY,
         salePointName TEXT,
         address TEXT,
@@ -38,7 +34,7 @@ conn.commit()
 for branch_data in offices_data:
     kep_value = branch_data["kep"] if branch_data["kep"] is not None else 0
     cursor.execute('''
-        INSERT INTO bank_branches (
+        INSERT INTO bank_offices (
             salePointName, address, status, rko, officeType, salePointFormat, suoAvailability,
             hasRamp, latitude, longitude, metroStation, distance, kep, myBranch
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -60,6 +56,4 @@ for branch_data in offices_data:
     ))
 
 conn.commit()
-
-# Закройте соединение с базой данных
 conn.close()
