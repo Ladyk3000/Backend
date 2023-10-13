@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Path
+from fastapi import FastAPI, Path, Query
 import uvicorn
 import json
 
@@ -26,6 +26,20 @@ class FastAPIApp:
         @self.app.get('/')
         async def get_home():
             return {'all': 'ok'}
+
+        @self.app.get('/offices-for-maps')
+        async def get_offices_for_maps(
+                longitude_min: float = Query(..., description="Minimum longitude"),
+                latitude_min: float = Query(..., description="Minimum latitude"),
+                longitude_max: float = Query(..., description="Maximum longitude"),
+                latitude_max: float = Query(..., description="Maximum latitude")
+        ):
+            offices_for_maps = self.database.get_offices_for_maps(longitude_min,
+                                                                  latitude_min,
+                                                                  longitude_max,
+                                                                  latitude_max)
+            data = {"message": offices_for_maps, "status": "success"}
+            return JSONResponse(content=data)
 
         @self.app.get('/categories')
         async def get_categories():

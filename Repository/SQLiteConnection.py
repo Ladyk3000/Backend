@@ -20,8 +20,14 @@ class SQLiteConnection:
     def get_subcategories_by_category(self, category_id):
         select_query = f"SELECT name FROM service_subcategories WHERE category_id={category_id}"
         self.cursor.execute(select_query)
-        services = [row[0] for row in self.cursor.fetchall()]
-        return services
+        subcategories = [row[0] for row in self.cursor.fetchall()]
+        return subcategories
+
+    def get_offices_for_maps(self, longitude_min, latitude_min, longitude_max, latitude_max):
+        select_query = "SELECT * FROM bank_offices WHERE longitude BETWEEN ? AND ? AND latitude BETWEEN ? AND ?"
+        self.cursor.execute(select_query, (longitude_min, longitude_max, latitude_min, latitude_max))
+        offices = self.cursor.fetchall()
+        return offices
 
     def close(self):
         self.conn.close()
