@@ -14,14 +14,14 @@ class FastAPIApp:
         self.pathfinder = PathFinder()
         self.database = database
         self.app = FastAPI()
-        origins = ["*"]
-        self.app.add_middleware(
-            CORSMiddleware,
-            allow_origins=origins,
-            allow_credentials=True,
-            allow_methods=["*"],
-            allow_headers=["*"],
-        )
+        # origins = ["*"]
+        # self.app.add_middleware(
+        #     CORSMiddleware,
+        #     allow_origins=origins,
+        #     allow_credentials=True,
+        #     allow_methods=["*"],
+        #     allow_headers=["*"],
+        # )
 
         @self.app.get('/')
         async def get_home():
