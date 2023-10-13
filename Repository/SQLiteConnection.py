@@ -26,7 +26,15 @@ class SQLiteConnection:
     def get_offices_for_maps(self, longitude_min, latitude_min, longitude_max, latitude_max):
         select_query = "SELECT * FROM bank_offices WHERE longitude BETWEEN ? AND ? AND latitude BETWEEN ? AND ?"
         self.cursor.execute(select_query, (longitude_min, longitude_max, latitude_min, latitude_max))
-        offices = self.cursor.fetchall()
+        rows = self.cursor.fetchall()
+        offices = []
+        for row in rows:
+            office = {
+                "id": row[0],
+                "latitude": row[-6],
+                "longitude": row[-5],
+            }
+            offices.append(office)
         return offices
 
     def close(self):
