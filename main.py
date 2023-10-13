@@ -12,7 +12,16 @@ def get_home():
 
 @app.get('/offices')
 def get_offices():
-    with open('offices.txt', 'r', encoding='utf-8') as file:
+    with open('Data/offices.txt', 'r', encoding='utf-8') as file:
+        data = file.read()
+
+    offices = json.loads(data)
+    return offices
+
+
+@app.get('/atms')
+def get_offices():
+    with open('Data/atms.txt', 'r', encoding='utf-8') as file:
         data = file.read()
 
     offices = json.loads(data)
