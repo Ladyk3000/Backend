@@ -17,8 +17,8 @@ class SQLiteConnection:
         category_names = [row[0] for row in self.cursor.fetchall()]
         return category_names
 
-    def get_services_by_category(self, category_id):
-        select_query = f"SELECT name FROM banking_services WHERE category_id={category_id}"
+    def get_subcategories_by_category(self, category_id):
+        select_query = f"SELECT name FROM service_subcategories WHERE category_id={category_id}"
         self.cursor.execute(select_query)
         services = [row[0] for row in self.cursor.fetchall()]
         return services
