@@ -1,4 +1,7 @@
+import random
 import sqlite3
+
+from Repository.PathFinder import PathFinder
 
 
 class SQLiteConnection:
@@ -24,19 +27,63 @@ class SQLiteConnection:
         return subcategories
 
     def get_offices_for_maps(self, longitude_min, latitude_min, longitude_max, latitude_max):
-        select_query = "SELECT * FROM bank_offices WHERE longitude BETWEEN ? AND ? AND latitude BETWEEN ? AND ?"
+        select_query = "SELECT id, latitude, longitude FROM bank_offices " \
+                       "WHERE longitude BETWEEN ? AND ? AND latitude BETWEEN ? AND ?"
         self.cursor.execute(select_query, (longitude_min, longitude_max, latitude_min, latitude_max))
         rows = self.cursor.fetchall()
         offices = []
         for row in rows:
             office = {
                 "id": row[0],
-                "latitude": row[-6],
-                "longitude": row[-5],
+                "latitude": row[1],
+                "longitude": row[2],
             }
             offices.append(office)
         return offices
 
+    def get_atms_for_maps(self, longitude_min, latitude_min, longitude_max, latitude_max):
+        select_query = "SELECT id, latitude, longitude FROM bank_atms " \
+                       "WHERE longitude BETWEEN ? AND ? AND latitude BETWEEN ? AND ?"
+        self.cursor.execute(select_query, (longitude_min, longitude_max, latitude_min, latitude_max))
+        rows = self.cursor.fetchall()
+        atms = []
+        for row in rows:
+            office = {
+                "id": row[0],
+                "latitude": row[1],
+                "longitude": row[2],
+            }
+            atms.append(office)
+        return atms
+
+    def get_best_office(self, longitude, latitude):
+        select_query = "SELECT id, longitude, latitude FROM bank_offices"
+        self.cursor.execute(select_query)
+        offices = self.cursor.fetchall()
+
+        distances = []
+        for office in offices:
+            office_id, office_longitude, office_latitude = office
+            distance = PathFinder.haversine(latitude, longitude, office_latitude, office_longitude)
+            distances.append((office_id, distance))
+
+        distances.sort(key=lambda x: x[1])
+        closest_offices = distances[:5]
+
+        best_offices = []
+        for office_id, _ in closest_offices:
+            self.cursor.execute("SELECT id, longitude, latitude, address  FROM bank_offices WHERE id = ?", (office_id,))
+            office = self.cursor.fetchone()
+            if office:
+                best_offices.append({
+                    "id": office[0],
+                    "longitude": office[1],
+                    "latitude": office[2],
+                    "address": office[2],
+                    "load_rate": random.randint(1, 9) * 0.1
+                })
+
+        return best_offices
+
     def close(self):
         self.conn.close()
-
