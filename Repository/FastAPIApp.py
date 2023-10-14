@@ -117,6 +117,17 @@ class FastAPIApp:
             data = {"message": office, "status": "success"}
             return JSONResponse(content=data)
 
+        @self.app.get('/get-near-offices')
+        async def get_near_offices(
+                longitude: float = Query(..., description="Longitude"),
+                latitude: float = Query(..., description="Latitude")
+        ):
+            office = self.database.get_best_office(longitude=longitude,
+                                                   latitude=latitude,
+                                                   k=10)
+            data = {"message": office, "status": "success"}
+            return JSONResponse(content=data)
+
         @self.app.get('/get-suit-atm')
         async def get_suitable_atm(
                 longitude: float = Query(..., description="Longitude"),
@@ -125,6 +136,21 @@ class FastAPIApp:
             atm = self.database.get_best_atm(longitude=longitude,
                                              latitude=latitude)
             data = {"message": atm, "status": "success"}
+            return JSONResponse(content=data)
+
+        @self.app.get('/get-days')
+        async def get_days_for_reservation(office_id: int = Query(..., description="Office ID")):
+            days = self.database.get_reservation_days(office_id)
+            data = {"message": days, "status": "success"}
+            return JSONResponse(content=data)
+
+        @self.app.get('/get-time-slots')
+        async def get_time_slots(
+                office_id: int = Query(..., description="Office ID"),
+                reservation_date: str = Query(..., description="Reservation_date"),
+        ):
+            time_slots = self.database.get_time_slots(office_id, reservation_date)
+            data = {"message": time_slots, "status": "success"}
             return JSONResponse(content=data)
 
     def run(self):
