@@ -75,6 +75,58 @@ class FastAPIApp:
             data = {"message": bank_services, "status": "success"}
             return JSONResponse(content=data)
 
+        @self.app.get('/available-offices')
+        async def available_offices(
+                service_id: str = Query(..., description="Service ID"),
+                longitude: float = Query(..., description="Longitude"),
+                latitude: float = Query(..., description="Latitude")
+        ):
+            offices = self.branch_manager.get_available_near_offices(service_id=service_id,
+                                                                     longitude=longitude,
+                                                                     latitude=latitude)
+            data = {"message": offices, "status": "success"}
+            return JSONResponse(content=data)
+
+        @self.app.get('/get-days')
+        async def get_days_for_reservation(office_id: int = Query(..., description="Office ID")):
+            days = self.database.get_reservation_days(office_id)
+            data = {"message": days, "status": "success"}
+            return JSONResponse(content=data)
+
+        @self.app.get('/get-time-slots')
+        async def get_time_slots(
+                office_id: int = Query(..., description="Office ID"),
+                reservation_date: str = Query(..., description="Reservation date"),
+        ):
+            time_slots = self.database.get_time_slots(office_id, reservation_date)
+            data = {"message": time_slots, "status": "success"}
+            return JSONResponse(content=data)
+
+        @self.app.get('/add-reservation')
+        async def add_reservation(
+                office_id: int = Query(..., description="Office ID"),
+                reservation_date: str = Query(..., description="Reservation date"),
+                reservation_time: str = Query(..., description="Reservation time"),
+                service_id: int = Query(..., description="Service ID"),
+        ):
+            reservation_id = self.database.add_reservation(office_id=office_id,
+                                                           reservation_date=reservation_date,
+                                                           reservation_time=reservation_time,
+                                                           service_id=service_id)
+            self.branch_manager.add_reservation(reservation_id)
+            data = {"message": reservation_id, "status": "success"}
+            return JSONResponse(content=data)
+
+        @self.app.get('/add-reservation-notify')
+        async def add_reservation(
+                reservation_id: int = Query(..., description="Reservation ID"),
+                phone_number: str = Query(..., description="Phone number"),
+        ):
+            self.database.add_reservation_notify(reservation_id=reservation_id,
+                                                 phone_number=phone_number)
+            data = {"status": "success"}
+            return JSONResponse(content=data)
+
         @self.app.get('/offices')
         async def get_offices():
             with open('Data/offices.txt', 'r', encoding='utf-8') as file:
@@ -115,16 +167,6 @@ class FastAPIApp:
             data = {"message": office_info, "status": "success"}
             return JSONResponse(content=data)
 
-        @self.app.get('/get-suit-office')
-        async def get_suitable_office(
-                longitude: float = Query(..., description="Longitude"),
-                latitude: float = Query(..., description="Latitude")
-        ):
-            office = self.branch_manager.get_best_office(longitude=longitude,
-                                                         latitude=latitude)
-            data = {"message": office, "status": "success"}
-            return JSONResponse(content=data)
-
         @self.app.get('/get-near-offices')
         async def get_near_offices(
                 longitude: float = Query(..., description="Longitude"),
@@ -133,6 +175,16 @@ class FastAPIApp:
             office = self.database.get_near_offices(longitude=longitude,
                                                     latitude=latitude,
                                                     k=10)
+            data = {"message": office, "status": "success"}
+            return JSONResponse(content=data)
+
+        @self.app.get('/get-suit-office')
+        async def get_suitable_office(
+                longitude: float = Query(..., description="Longitude"),
+                latitude: float = Query(..., description="Latitude")
+        ):
+            office = self.branch_manager.get_best_office(longitude=longitude,
+                                                         latitude=latitude)
             data = {"message": office, "status": "success"}
             return JSONResponse(content=data)
 
@@ -146,61 +198,16 @@ class FastAPIApp:
             data = {"message": atm, "status": "success"}
             return JSONResponse(content=data)
 
-        @self.app.get('/get-days')
-        async def get_days_for_reservation(office_id: int = Query(..., description="Office ID")):
-            days = self.database.get_reservation_days(office_id)
-            data = {"message": days, "status": "success"}
-            return JSONResponse(content=data)
-
-        @self.app.get('/get-time-slots')
-        async def get_time_slots(
-                office_id: int = Query(..., description="Office ID"),
-                reservation_date: str = Query(..., description="Reservation date"),
-        ):
-            time_slots = self.database.get_time_slots(office_id, reservation_date)
-            data = {"message": time_slots, "status": "success"}
-            return JSONResponse(content=data)
-
-        @self.app.get('/add-reservation')
-        async def add_reservation(
-                office_id: int = Query(..., description="Office ID"),
-                reservation_date: str = Query(..., description="Reservation date"),
-                reservation_time: str = Query(..., description="Reservation time"),
-                service_name: str = Query(..., description="Service name"),
-        ):
-            reservation_id = self.database.add_reservation(office_id=office_id,
-                                                           reservation_date=reservation_date,
-                                                           reservation_time=reservation_time,
-                                                           service_name=service_name)
-            data = {"message": reservation_id, "status": "success"}
-            return JSONResponse(content=data)
-
-        @self.app.get('/add-reservation-notify')
-        async def add_reservation(
-                reservation_id: int = Query(..., description="Office ID"),
-                phone_number: str = Query(..., description="Service name"),
-        ):
-            self.database.add_reservation_notify(reservation_id=reservation_id,
-                                                 phone_number=phone_number)
-            data = {"status": "success"}
-            return JSONResponse(content=data)
-
         @self.app.get('/available-services')
         async def available_services(office_id: int = Query(..., description="Office ID")):
             services = self.branch_manager.get_available_services(office_id)
             data = {"message": services, "status": "success"}
             return JSONResponse(content=data)
 
-        @self.app.get('/available-offices')
-        async def available_offices(
-                service_id: str = Query(..., description="Service ID"),
-                longitude: float = Query(..., description="Longitude"),
-                latitude: float = Query(..., description="Latitude")
-        ):
-            offices = self.branch_manager.get_available_near_offices(service_id=service_id,
-                                                                     longitude=longitude,
-                                                                     latitude=latitude)
-            data = {"message": offices, "status": "success"}
+        @self.app.get('/digital-queue')
+        async def digital_queue(office_id: int = Query(..., description="Office ID")):
+            queue = self.branch_manager.get_digital_queue(office_id)
+            data = {"message": queue, "status": "success"}
             return JSONResponse(content=data)
 
     def run(self):

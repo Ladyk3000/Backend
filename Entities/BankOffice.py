@@ -1,3 +1,4 @@
+from collections import deque
 from dataclasses import asdict
 import numpy as np
 from Entities.BankingService import BankingService
@@ -16,6 +17,7 @@ class BankOffice:
         self.load_rate = self.get_load_rate()
         self.rating = self.get_rating()
         self.provided_services = self.get_services()
+        self.digital_queue = deque(maxlen=160)
 
     @staticmethod
     def get_load_rate():

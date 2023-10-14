@@ -161,7 +161,7 @@ class SQLiteConnection:
         distance = PathFinder.haversine(lat1=latitude,
                                         lon1=longitude,
                                         lat2=office_info['latitude'],
-                                        lon2=office_info['latitude'])
+                                        lon2=office_info['longitude'])
         load_rate = self.get_load_rate()
         office_info['distance'] = distance
         office_info['load_rate'] = load_rate
@@ -208,7 +208,7 @@ class SQLiteConnection:
 
         reservation_days = []
         is_saturday_working = self.is_saturday_working(office_id)
-        day_counter = 0
+        day_counter = 1
         while len(reservation_days) < 7:
             day_counter += 1
             next_day = today + datetime.timedelta(days=day_counter)
@@ -265,14 +265,15 @@ class SQLiteConnection:
 
         return time_slots
 
-    def add_reservation(self, office_id, reservation_date, reservation_time, service_name, notify=False):
+    def add_reservation(self, office_id, reservation_date, reservation_time, service_id, notify=False):
         try:
             self.cursor.execute(
-                "INSERT INTO reservations (office_id, reservation_date, reservation_time, service_name, notify) "
+                "INSERT INTO reservations (office_id, reservation_date, reservation_time, service_id, notify) "
                 "VALUES (?, ?, ?, ?, ?)",
-                (office_id, reservation_date, reservation_time, service_name, notify))
+                (office_id, reservation_date, reservation_time, service_id, notify))
             self.conn.commit()
-            return "Reservation added successfully."
+            reservation_id = self.cursor.lastrowid
+            return reservation_id
         except sqlite3.Error as e:
             return f"Error adding reservation: {str(e)}"
 
@@ -294,6 +295,23 @@ class SQLiteConnection:
             columns = 'id, salePointName, post_index, address, latitude, longitude'
         try:
             self.cursor.execute(f"SELECT {columns} FROM {table}")
+            data = self.cursor.fetchall()
+            return data
+        except sqlite3.Error as e:
+            return f"Error adding notification: {str(e)}"
+
+    def get_reservation_data(self, reservation_id):
+        try:
+            self.cursor.execute(f"SELECT office_id, reservation_date, reservation_time, service_id, phone_number, notify"
+                                f" FROM reservations WHERE id = {reservation_id}")
+            data = self.cursor.fetchone()
+            return data
+        except sqlite3.Error as e:
+            return f"Error adding notification: {str(e)}"
+
+    def get_reservations(self, office_id):
+        try:
+            self.cursor.execute(f"SELECT id FROM reservations WHERE office_id = {office_id}")
             data = self.cursor.fetchall()
             return data
         except sqlite3.Error as e:

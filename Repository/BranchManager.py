@@ -1,6 +1,8 @@
 from collections import OrderedDict
+from dataclasses import asdict
 
 from Entities.BankOffice import BankOffice
+from Entities.Reservation import Reservation
 from Repository.SQLiteConnection import SQLiteConnection
 
 
@@ -81,11 +83,26 @@ class BranchManager:
                 office = next((o for o in self.offices if o.id == office_data['id']), None)
                 office.distance = office_data['distance']
                 if office and any(service['id'] == int(service_id) for service in office.provided_services):
-                    suit_offices.append(office.as_dict())
+                    suit_offices.append(office)
 
             k += 1
 
             if k > 100:
                 break
 
-        return suit_offices[:max_results]
+        suit_offices.sort(key=lambda office: office.distance)
+        return [office.as_dict() for office in suit_offices[:max_results]]
+
+    def add_reservation(self, reservation_id):
+        reservation_data = self.database.get_reservation_data(reservation_id)
+        reservation = Reservation(reservation_id, *reservation_data)
+        office = [office for office in self.offices if office.id == reservation.office_id][0]
+        office.digital_queue.append(reservation)
+
+    def get_digital_queue(self, office_id):
+        reservation_ids = self.database.get_reservations(office_id)
+        reservations = []
+        for (reservation_id,) in reservation_ids:
+            reservation_data = self.database.get_reservation_data(reservation_id)
+            reservations.append(asdict(Reservation(reservation_id, *reservation_data)))
+        return reservations
