@@ -19,13 +19,29 @@ class BankOffice:
         self.provided_services = self.get_services()
         self.digital_queue = deque(maxlen=160)
 
+    def get_load_rate(self):
+        digital_queue_score = self.get_digital_queue_score()
+        smart_cam_score = self.get_smart_cam_score()
+        digital_queue_weight = 0.8
+        smart_cam_weight = 0.2
+        load_rate = round(float(digital_queue_weight * digital_queue_score + smart_cam_weight * smart_cam_score), 1)
+        return load_rate
+
     @staticmethod
-    def get_load_rate():
-        min_value = 10
-        max_value = 100
-        random_number = np.random.uniform(min_value, max_value, 1)
-        random_rating = round(random_number[0] / max_value, 1)
-        return random_rating
+    def get_digital_queue_score():
+        min_wait_minutes = 3
+        max_wait_minutes = 10
+        mean_wait_time_per_hour = float(np.random.uniform(min_wait_minutes, max_wait_minutes, 1))
+        return round(mean_wait_time_per_hour / max_wait_minutes, 2)
+
+    @staticmethod
+    def get_smart_cam_score(threshold=0.8):
+        capacity = 100
+        people_income_per_hour = np.random.uniform(50, 150, 1)
+        people_outcome_per_hour = np.random.uniform(50, 150, 1)
+        current_people_inside = float(people_income_per_hour - people_outcome_per_hour)
+        load_coefficient = current_people_inside / (threshold * capacity)
+        return round(load_coefficient, 2)
 
     @staticmethod
     def get_rating():
