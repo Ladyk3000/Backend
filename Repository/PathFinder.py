@@ -18,4 +18,4 @@ class PathFinder:
 
         distance = radius * c
 
-        return distance
+        return round(distance, 1)

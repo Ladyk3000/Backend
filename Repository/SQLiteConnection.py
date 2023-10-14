@@ -1,6 +1,6 @@
 import datetime
-import random
 import sqlite3
+import numpy as np
 
 from Repository.PathFinder import PathFinder
 
@@ -13,18 +13,19 @@ class SQLiteConnection:
 
     def create_reservation_table(self):
         try:
-            self.cursor.execute(
-                """
-                CREATE TABLE reservations (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                office_id INTEGER,
-                reservation_date DATE,
-                reservation_time TIME,
-                service_name TEXT,
-                phone_number TEXT,  -- Add a column for phone number
-                notify BOOLEAN
-                );
-                """)
+            self.cursor.execute('''
+                    CREATE TABLE IF NOT EXISTS reservations (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        office_id INTEGER,
+                        reservation_date DATE,
+                        reservation_time TIME,
+                        service_id INTEGER,
+                        phone_number TEXT,
+                        notify BOOLEAN,
+                        FOREIGN KEY (office_id) REFERENCES bank_offices (id),
+                        FOREIGN KEY (service_id) REFERENCES bank_services (id)
+                    )
+                ''')
             self.conn.commit()
             return "create reservation table"
         except sqlite3.Error as e:
@@ -57,6 +58,20 @@ class SQLiteConnection:
             subcategories.append(subcategory)
         return subcategories
 
+    def get_bank_services(self, subcategory_id):
+        select_query = f"SELECT id, name, subcategory_id FROM bank_services WHERE subcategory_id={subcategory_id}"
+        self.cursor.execute(select_query)
+        rows = self.cursor.fetchall()
+        services = []
+        for row in rows:
+            service = {
+                "id": row[0],
+                "name": row[1],
+                "subcategory_id": row[2]
+            }
+            services.append(service)
+        return services
+
     def get_offices_for_maps(self, longitude_min, latitude_min, longitude_max, latitude_max):
         select_query = "SELECT id, latitude, longitude FROM bank_offices " \
                        "WHERE longitude BETWEEN ? AND ? AND latitude BETWEEN ? AND ?"
@@ -87,7 +102,7 @@ class SQLiteConnection:
             atms.append(office)
         return atms
 
-    def get_best_office(self, longitude, latitude, k=5):
+    def get_near_offices(self, longitude, latitude, k=5):
         closest_offices = self.get_nearest_branches(branch_type='office', longitude=longitude, latitude=latitude, k=k)
         best_offices = []
         for office_id, distance in closest_offices:
@@ -106,7 +121,7 @@ class SQLiteConnection:
         return best_offices
 
     def get_best_atm(self, longitude, latitude):
-        closest_atms = self.get_nearest_branches(branch_type='office', longitude=longitude, latitude=latitude)
+        closest_atms = self.get_nearest_branches(branch_type='atm', longitude=longitude, latitude=latitude, k=100)
         best_atms = []
         for atm_id, distance in closest_atms:
             self.cursor.execute("SELECT id, longitude, latitude, address  FROM bank_atms WHERE id = ?", (atm_id,))
@@ -146,7 +161,7 @@ class SQLiteConnection:
         distance = PathFinder.haversine(lat1=latitude,
                                         lon1=longitude,
                                         lat2=office_info['latitude'],
-                                        lon2=office_info['latitude'])
+                                        lon2=office_info['longitude'])
         load_rate = self.get_load_rate()
         office_info['distance'] = distance
         office_info['load_rate'] = load_rate
@@ -171,6 +186,14 @@ class SQLiteConnection:
             branch_info['load_rate'] = self.get_load_rate()
         return branch_info
 
+    @staticmethod
+    def get_load_rate():
+        min_value = 10
+        max_value = 100
+        random_number = np.random.uniform(min_value, max_value, 1)
+        random_rating = round(random_number[0] / max_value, 1)
+        return random_rating
+
     def get_atm_info(self, atm_id, longitude, latitude):
         atm_info = self.get_branch_info(branch_type='atm', branch_id=atm_id)
         distance = PathFinder.haversine(lat1=latitude,
@@ -180,16 +203,12 @@ class SQLiteConnection:
         atm_info['distance'] = distance
         return atm_info
 
-    @staticmethod
-    def get_load_rate():
-        return random.randint(1, 9) * 0.1
-
     def get_reservation_days(self, office_id):
         today = datetime.date.today()
 
         reservation_days = []
         is_saturday_working = self.is_saturday_working(office_id)
-        day_counter = 0
+        day_counter = 1
         while len(reservation_days) < 7:
             day_counter += 1
             next_day = today + datetime.timedelta(days=day_counter)
@@ -246,14 +265,15 @@ class SQLiteConnection:
 
         return time_slots
 
-    def add_reservation(self, office_id, reservation_date, reservation_time, service_name, notify=False):
+    def add_reservation(self, office_id, reservation_date, reservation_time, service_id, notify=False):
         try:
             self.cursor.execute(
-                "INSERT INTO reservations (office_id, reservation_date, reservation_time, service_name, notify) "
+                "INSERT INTO reservations (office_id, reservation_date, reservation_time, service_id, notify) "
                 "VALUES (?, ?, ?, ?, ?)",
-                (office_id, reservation_date, reservation_time, service_name, notify))
+                (office_id, reservation_date, reservation_time, service_id, notify))
             self.conn.commit()
-            return "Reservation added successfully."
+            reservation_id = self.cursor.lastrowid
+            return reservation_id
         except sqlite3.Error as e:
             return f"Error adding reservation: {str(e)}"
 
@@ -275,6 +295,23 @@ class SQLiteConnection:
             columns = 'id, salePointName, post_index, address, latitude, longitude'
         try:
             self.cursor.execute(f"SELECT {columns} FROM {table}")
+            data = self.cursor.fetchall()
+            return data
+        except sqlite3.Error as e:
+            return f"Error adding notification: {str(e)}"
+
+    def get_reservation_data(self, reservation_id):
+        try:
+            self.cursor.execute(f"SELECT office_id, reservation_date, reservation_time, service_id, phone_number, notify"
+                                f" FROM reservations WHERE id = {reservation_id}")
+            data = self.cursor.fetchone()
+            return data
+        except sqlite3.Error as e:
+            return f"Error adding notification: {str(e)}"
+
+    def get_reservations(self, office_id):
+        try:
+            self.cursor.execute(f"SELECT id FROM reservations WHERE office_id = {office_id}")
             data = self.cursor.fetchall()
             return data
         except sqlite3.Error as e:
