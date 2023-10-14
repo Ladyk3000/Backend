@@ -9,12 +9,7 @@ from Repository.SQLiteConnection import SQLiteConnection
 class BranchManager:
     def __init__(self, database: SQLiteConnection):
         self.database = database
-        self.atms = self.get_atms()
         self.offices = self.get_offices()
-
-    def get_atms(self):
-        data = self.database.get_branch_data(branch_type='atm')
-        return []
 
     def get_offices(self):
         data = self.database.get_branch_data(branch_type='office')
