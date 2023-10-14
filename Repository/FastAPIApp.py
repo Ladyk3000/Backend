@@ -34,11 +34,25 @@ class FastAPIApp:
                 longitude_max: float = Query(..., description="Maximum longitude"),
                 latitude_max: float = Query(..., description="Maximum latitude")
         ):
-            offices_for_maps = self.database.get_offices_for_maps(longitude_min,
-                                                                  latitude_min,
-                                                                  longitude_max,
-                                                                  latitude_max)
+            offices_for_maps = self.database.get_offices_for_maps(longitude_min=longitude_min,
+                                                                  latitude_min=latitude_min,
+                                                                  longitude_max=longitude_max,
+                                                                  latitude_max=latitude_max)
             data = {"message": offices_for_maps, "status": "success"}
+            return JSONResponse(content=data)
+
+        @self.app.get('/atms-for-maps')
+        async def get_atms_for_maps(
+                longitude_min: float = Query(..., description="Minimum longitude"),
+                latitude_min: float = Query(..., description="Minimum latitude"),
+                longitude_max: float = Query(..., description="Maximum longitude"),
+                latitude_max: float = Query(..., description="Maximum latitude")
+        ):
+            atms_for_maps = self.database.get_atms_for_maps(longitude_min=longitude_min,
+                                                            latitude_min=latitude_min,
+                                                            longitude_max=longitude_max,
+                                                            latitude_max=latitude_max)
+            data = {"message": atms_for_maps, "status": "success"}
             return JSONResponse(content=data)
 
         @self.app.get('/categories')
@@ -61,18 +75,56 @@ class FastAPIApp:
             data = {"message": offices, "status": "success"}
             return JSONResponse(content=data)
 
-        @self.app.get('/get-suit-office')
-        async def get_suitable_office():
-            office = self.pathfinder.get_best_office()
-            data = {"message": office, "status": "success"}
-            return JSONResponse(content=data)
-
         @self.app.get('/atms')
         async def get_atms():
             with open('Data/atms.txt', 'r', encoding='utf-8') as file:
                 data = file.read()
             atms = json.loads(data)
             data = {"message": atms, "status": "success"}
+            return JSONResponse(content=data)
+
+        @self.app.get('/office-info')
+        async def get_office_info(
+                office_id: int = Query(..., description="Office ID"),
+                longitude: float = Query(..., description="Longitude"),
+                latitude: float = Query(..., description="Latitude")
+        ):
+            office_info = self.database.get_office_info(office_id=office_id,
+                                                        latitude=latitude,
+                                                        longitude=longitude)
+            data = {"message": office_info, "status": "success"}
+            return JSONResponse(content=data)
+
+        @self.app.get('/atm-info')
+        async def get_atm_info(
+                atm_id: int = Query(..., description="ATM ID"),
+                longitude: float = Query(..., description="Longitude"),
+                latitude: float = Query(..., description="Latitude")
+        ):
+            office_info = self.database.get_atm_info(atm_id=atm_id,
+                                                     latitude=latitude,
+                                                     longitude=longitude)
+            data = {"message": office_info, "status": "success"}
+            return JSONResponse(content=data)
+
+        @self.app.get('/get-suit-office')
+        async def get_suitable_office(
+                longitude: float = Query(..., description="Longitude"),
+                latitude: float = Query(..., description="Latitude")
+        ):
+            office = self.database.get_best_office(longitude=longitude,
+                                                   latitude=latitude)
+            data = {"message": office, "status": "success"}
+            return JSONResponse(content=data)
+
+        @self.app.get('/get-suit-atm')
+        async def get_suitable_atm(
+                longitude: float = Query(..., description="Longitude"),
+                latitude: float = Query(..., description="Latitude")
+        ):
+            atm = self.database.get_best_atm(longitude=longitude,
+                                             latitude=latitude)
+            data = {"message": atm, "status": "success"}
             return JSONResponse(content=data)
 
     def run(self):
