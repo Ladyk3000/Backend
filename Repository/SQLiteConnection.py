@@ -13,18 +13,19 @@ class SQLiteConnection:
 
     def create_reservation_table(self):
         try:
-            self.cursor.execute(
-                """
-                CREATE TABLE reservations (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                office_id INTEGER,
-                reservation_date DATE,
-                reservation_time TIME,
-                service_name TEXT,
-                phone_number TEXT,  -- Add a column for phone number
-                notify BOOLEAN
-                );
-                """)
+            self.cursor.execute('''
+                    CREATE TABLE IF NOT EXISTS reservations (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        office_id INTEGER,
+                        reservation_date DATE,
+                        reservation_time TIME,
+                        service_id INTEGER,
+                        phone_number TEXT,
+                        notify BOOLEAN,
+                        FOREIGN KEY (office_id) REFERENCES bank_offices (id),
+                        FOREIGN KEY (service_id) REFERENCES bank_services (id)
+                    )
+                ''')
             self.conn.commit()
             return "create reservation table"
         except sqlite3.Error as e:
@@ -56,6 +57,20 @@ class SQLiteConnection:
             }
             subcategories.append(subcategory)
         return subcategories
+
+    def get_bank_services(self, subcategory_id):
+        select_query = f"SELECT id, name, subcategory_id FROM bank_services WHERE subcategory_id={subcategory_id}"
+        self.cursor.execute(select_query)
+        rows = self.cursor.fetchall()
+        services = []
+        for row in rows:
+            service = {
+                "id": row[0],
+                "name": row[1],
+                "subcategory_id": row[2]
+            }
+            services.append(service)
+        return services
 
     def get_offices_for_maps(self, longitude_min, latitude_min, longitude_max, latitude_max):
         select_query = "SELECT id, latitude, longitude FROM bank_offices " \
@@ -106,7 +121,7 @@ class SQLiteConnection:
         return best_offices
 
     def get_best_atm(self, longitude, latitude):
-        closest_atms = self.get_nearest_branches(branch_type='office', longitude=longitude, latitude=latitude)
+        closest_atms = self.get_nearest_branches(branch_type='atm', longitude=longitude, latitude=latitude, k=100)
         best_atms = []
         for atm_id, distance in closest_atms:
             self.cursor.execute("SELECT id, longitude, latitude, address  FROM bank_atms WHERE id = ?", (atm_id,))

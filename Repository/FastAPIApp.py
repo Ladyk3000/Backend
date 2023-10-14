@@ -69,6 +69,12 @@ class FastAPIApp:
             data = {"message": subcategories, "status": "success"}
             return JSONResponse(content=data)
 
+        @self.app.get('/services')
+        async def get_bank_services(subcategory_id: int = Query(..., title="Category ID")):
+            bank_services = self.database.get_bank_services(subcategory_id)
+            data = {"message": bank_services, "status": "success"}
+            return JSONResponse(content=data)
+
         @self.app.get('/offices')
         async def get_offices():
             with open('Data/offices.txt', 'r', encoding='utf-8') as file:

@@ -76,11 +76,12 @@ class BranchManager:
         k = max_results
         while len(suit_offices) < max_results:
             offices_dicts = self.database.get_near_offices(longitude=longitude, latitude=latitude, k=k)
+
             for office_data in offices_dicts:
                 office = next((o for o in self.offices if o.id == office_data['id']), None)
-
-                if office and any(service['id'] == service_id for service in office.provided_services):
-                    suit_offices.append(office)
+                office.distance = office_data['distance']
+                if office and any(service['id'] == int(service_id) for service in office.provided_services):
+                    suit_offices.append(office.as_dict())
 
             k += 1
 

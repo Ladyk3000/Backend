@@ -34,7 +34,7 @@ class BankOffice:
         return random_rating
 
     def get_services(self):
-        select_query = f"SELECT * FROM bank_services"
+        select_query = f"SELECT id, name, description, average_processing_time, is_online FROM bank_services"
         self.database.cursor.execute(select_query)
         data = self.database.cursor.fetchall()
         return [asdict(BankingService(*row)) for row in data]
