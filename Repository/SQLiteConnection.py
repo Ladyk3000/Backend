@@ -1,6 +1,6 @@
 import datetime
-import random
 import sqlite3
+import numpy as np
 
 from Repository.PathFinder import PathFinder
 
@@ -87,7 +87,7 @@ class SQLiteConnection:
             atms.append(office)
         return atms
 
-    def get_best_office(self, longitude, latitude, k=5):
+    def get_near_offices(self, longitude, latitude, k=5):
         closest_offices = self.get_nearest_branches(branch_type='office', longitude=longitude, latitude=latitude, k=k)
         best_offices = []
         for office_id, distance in closest_offices:
@@ -171,6 +171,14 @@ class SQLiteConnection:
             branch_info['load_rate'] = self.get_load_rate()
         return branch_info
 
+    @staticmethod
+    def get_load_rate():
+        min_value = 10
+        max_value = 100
+        random_number = np.random.uniform(min_value, max_value, 1)
+        random_rating = round(random_number[0] / max_value, 1)
+        return random_rating
+
     def get_atm_info(self, atm_id, longitude, latitude):
         atm_info = self.get_branch_info(branch_type='atm', branch_id=atm_id)
         distance = PathFinder.haversine(lat1=latitude,
@@ -179,10 +187,6 @@ class SQLiteConnection:
                                         lon2=atm_info['latitude'])
         atm_info['distance'] = distance
         return atm_info
-
-    @staticmethod
-    def get_load_rate():
-        return random.randint(1, 9) * 0.1
 
     def get_reservation_days(self, office_id):
         today = datetime.date.today()

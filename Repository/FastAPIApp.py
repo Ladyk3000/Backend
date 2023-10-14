@@ -114,8 +114,8 @@ class FastAPIApp:
                 longitude: float = Query(..., description="Longitude"),
                 latitude: float = Query(..., description="Latitude")
         ):
-            office = self.database.get_best_office(longitude=longitude,
-                                                   latitude=latitude)
+            office = self.branch_manager.get_best_office(longitude=longitude,
+                                                         latitude=latitude)
             data = {"message": office, "status": "success"}
             return JSONResponse(content=data)
 
@@ -124,9 +124,9 @@ class FastAPIApp:
                 longitude: float = Query(..., description="Longitude"),
                 latitude: float = Query(..., description="Latitude")
         ):
-            office = self.database.get_best_office(longitude=longitude,
-                                                   latitude=latitude,
-                                                   k=10)
+            office = self.database.get_near_offices(longitude=longitude,
+                                                    latitude=latitude,
+                                                    k=10)
             data = {"message": office, "status": "success"}
             return JSONResponse(content=data)
 
@@ -183,6 +183,18 @@ class FastAPIApp:
         async def available_services(office_id: int = Query(..., description="Office ID")):
             services = self.branch_manager.get_available_services(office_id)
             data = {"message": services, "status": "success"}
+            return JSONResponse(content=data)
+
+        @self.app.get('/available-offices')
+        async def available_offices(
+                service_id: str = Query(..., description="Service ID"),
+                longitude: float = Query(..., description="Longitude"),
+                latitude: float = Query(..., description="Latitude")
+        ):
+            offices = self.branch_manager.get_available_near_offices(service_id=service_id,
+                                                                     longitude=longitude,
+                                                                     latitude=latitude)
+            data = {"message": offices, "status": "success"}
             return JSONResponse(content=data)
 
     def run(self):
