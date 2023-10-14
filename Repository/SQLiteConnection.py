@@ -57,21 +57,9 @@ class SQLiteConnection:
         return atms
 
     def get_best_office(self, longitude, latitude):
-        select_query = "SELECT id, longitude, latitude FROM bank_offices"
-        self.cursor.execute(select_query)
-        offices = self.cursor.fetchall()
-
-        distances = []
-        for office in offices:
-            office_id, office_longitude, office_latitude = office
-            distance = PathFinder.haversine(latitude, longitude, office_latitude, office_longitude)
-            distances.append((office_id, distance))
-
-        distances.sort(key=lambda x: x[1])
-        closest_offices = distances[:5]
-
+        closest_offices = self.get_nearest_branches(branch_type='office', longitude=longitude, latitude=latitude)
         best_offices = []
-        for office_id, _ in closest_offices:
+        for office_id, distance in closest_offices:
             self.cursor.execute("SELECT id, longitude, latitude, address  FROM bank_offices WHERE id = ?", (office_id,))
             office = self.cursor.fetchone()
             if office:
@@ -80,10 +68,90 @@ class SQLiteConnection:
                     "longitude": office[1],
                     "latitude": office[2],
                     "address": office[2],
-                    "load_rate": random.randint(1, 9) * 0.1
+                    "distance": distance,
+                    "load_rate": self.get_load_rate()
                 })
 
         return best_offices
+
+    def get_best_atm(self, longitude, latitude):
+        closest_atms = self.get_nearest_branches(branch_type='office', longitude=longitude, latitude=latitude)
+        best_atms = []
+        for atm_id, distance in closest_atms:
+            self.cursor.execute("SELECT id, longitude, latitude, address  FROM bank_atms WHERE id = ?", (atm_id,))
+            office = self.cursor.fetchone()
+            if office:
+                best_atms.append({
+                    "id": office[0],
+                    "longitude": office[1],
+                    "latitude": office[2],
+                    "address": office[3],
+                    "distance": distance,
+                })
+
+        return best_atms
+
+    def get_nearest_branches(self, branch_type, latitude, longitude, k=5):
+        if branch_type == 'atm':
+            table = 'bank_atms'
+        else:
+            table = 'bank_offices'
+        select_query = f"SELECT id, longitude, latitude FROM {table}"
+        self.cursor.execute(select_query)
+        branches = self.cursor.fetchall()
+        distances = []
+
+        for branch in branches:
+            branch_id, branch_longitude, branch_latitude = branch
+            distance = PathFinder.haversine(latitude, longitude, branch_latitude, branch_longitude)
+            distances.append((branch_id, distance))
+
+        distances.sort(key=lambda x: x[1])
+        closest_branches = distances[:k]
+        return closest_branches
+
+    def get_office_info(self, office_id, longitude, latitude):
+        office_info = self.get_branch_info(branch_type='office', branch_id=office_id)
+        distance = PathFinder.haversine(lat1=latitude,
+                                        lon1=longitude,
+                                        lat2=office_info['latitude'],
+                                        lon2=office_info['latitude'])
+        load_rate = self.get_load_rate()
+        office_info['distance'] = distance
+        office_info['load_rate'] = load_rate
+        return office_info
+
+    def get_branch_info(self, branch_type, branch_id):
+        if branch_type == 'atm':
+            table = 'bank_atms'
+        else:
+            table = 'bank_offices'
+        self.cursor.execute(f"SELECT id, longitude, latitude, address  FROM {table} WHERE id = ?", (branch_id,))
+        branch = self.cursor.fetchone()
+        branch_info = None
+        if branch:
+            branch_info = {
+                "id": branch[0],
+                "longitude": branch[1],
+                "latitude": branch[2],
+                "address": branch[3],
+            }
+        if branch_type == 'office':
+            branch_info['load_rate'] = self.get_load_rate()
+        return branch_info
+
+    def get_atm_info(self, atm_id, longitude, latitude):
+        atm_info = self.get_branch_info(branch_type='atm', branch_id=atm_id)
+        distance = PathFinder.haversine(lat1=latitude,
+                                        lon1=longitude,
+                                        lat2=atm_info['latitude'],
+                                        lon2=atm_info['latitude'])
+        atm_info['distance'] = distance
+        return atm_info
+
+    @staticmethod
+    def get_load_rate():
+        return random.randint(1, 9) * 0.1
 
     def close(self):
         self.conn.close()
