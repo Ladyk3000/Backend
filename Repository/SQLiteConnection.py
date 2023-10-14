@@ -31,15 +31,30 @@ class SQLiteConnection:
             return f"Error adding reservation: {str(e)}"
 
     def get_categories(self):
-        select_query = "SELECT name FROM service_categories"
+        select_query = "SELECT id, name FROM service_categories"
         self.cursor.execute(select_query)
-        category_names = [row[0] for row in self.cursor.fetchall()]
-        return category_names
+        rows = self.cursor.fetchall()
+        categories = []
+        for row in rows:
+            category = {
+                "id": row[0],
+                "name": row[1],
+            }
+            categories.append(category)
+        return categories
 
-    def get_subcategories_by_category(self, category_id):
-        select_query = f"SELECT name FROM service_subcategories WHERE category_id={category_id}"
+    def get_subcategories(self, category_id):
+        select_query = f"SELECT id, name, category_id FROM service_subcategories WHERE category_id={category_id}"
         self.cursor.execute(select_query)
-        subcategories = [row[0] for row in self.cursor.fetchall()]
+        rows = self.cursor.fetchall()
+        subcategories = []
+        for row in rows:
+            subcategory = {
+                "id": row[0],
+                "name": row[1],
+                "category_id": row[2]
+            }
+            subcategories.append(subcategory)
         return subcategories
 
     def get_offices_for_maps(self, longitude_min, latitude_min, longitude_max, latitude_max):
@@ -248,5 +263,19 @@ class SQLiteConnection:
                                 (phone_number, reservation_id))
             self.conn.commit()
             return "Notification added successfully."
+        except sqlite3.Error as e:
+            return f"Error adding notification: {str(e)}"
+
+    def get_branch_data(self, branch_type):
+        if branch_type == 'atm':
+            table = 'bank_atms'
+            columns = 'id, address, latitude, longitude'
+        else:
+            table = 'bank_offices'
+            columns = 'id, salePointName, post_index, address, latitude, longitude'
+        try:
+            self.cursor.execute(f"SELECT {columns} FROM {table}")
+            data = self.cursor.fetchall()
+            return data
         except sqlite3.Error as e:
             return f"Error adding notification: {str(e)}"

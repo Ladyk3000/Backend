@@ -1,13 +1,31 @@
+from dataclasses import asdict
+import numpy as np
+
+from Entities.BankingService import BankingService
+
+
 class BankOffice:
-    def __init__(self, name, distance, load_factor, service_time, facilities, rating):
+    def __init__(self, database, id_, name, post_index, address, latitude, longitude):
+        self.database = database
+        self.id = id_
         self.name = name
-        self.distance = distance
-        self.load_factor = load_factor
-        self.service_time = service_time
-        self.facilities = facilities
-        self.rating = rating
+        self.post_index = post_index
+        self.address = address
+        self.latitude = latitude
+        self.longitude = longitude
+        self.rating = self.get_rating()
+        self.provided_services = self.get_services()
 
-    def __repr__(self):
-        return f'BankOffice(name="{self.name}", distance={self.distance}, load_factor={self.load_factor}, ' \
-               f'service_time={self.service_time}, facilities="{self.facilities}", rating={self.rating})'
+    @staticmethod
+    def get_rating():
+        min_value = 35
+        max_value = 50
+        random_number = np.random.uniform(min_value, max_value, 1)
+        random_rating = round(random_number[0] / 10, 1)
+        return random_rating
 
+    def get_services(self):
+        select_query = f"SELECT * FROM bank_services"
+        self.database.cursor.execute(select_query)
+        data = self.database.cursor.fetchall()
+        return [asdict(BankingService(*row)) for row in data]
