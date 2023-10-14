@@ -1,17 +1,19 @@
-from fastapi import FastAPI, Path, Query
+from fastapi import FastAPI, Query
 import uvicorn
 import json
 
 from starlette.middleware.cors import CORSMiddleware
 from starlette.responses import JSONResponse
 
+from Repository.BranchManager import BranchManager
 from Repository.PathFinder import PathFinder
 from Repository.SQLiteConnection import SQLiteConnection
 
 
 class FastAPIApp:
-    def __init__(self, database: SQLiteConnection):
+    def __init__(self, branch_manager: BranchManager, database: SQLiteConnection):
         self.pathfinder = PathFinder()
+        self.branch_manager = branch_manager
         self.database = database
         self.app = FastAPI()
         origins = ["*"]
@@ -61,9 +63,9 @@ class FastAPIApp:
             data = {"message": categories, "status": "success"}
             return JSONResponse(content=data)
 
-        @self.app.get('/categories/{category_id}/subcategories')
-        async def get_subcategories(category_id: int = Path(..., title="Category ID")):
-            subcategories = self.database.get_subcategories_by_category(category_id)
+        @self.app.get('/subcategories')
+        async def get_subcategories(category_id: int = Query(..., title="Category ID")):
+            subcategories = self.database.get_subcategories(category_id)
             data = {"message": subcategories, "status": "success"}
             return JSONResponse(content=data)
 
@@ -175,6 +177,12 @@ class FastAPIApp:
             self.database.add_reservation_notify(reservation_id=reservation_id,
                                                  phone_number=phone_number)
             data = {"status": "success"}
+            return JSONResponse(content=data)
+
+        @self.app.get('/available-services')
+        async def available_services(office_id: int = Query(..., description="Office ID")):
+            services = self.branch_manager.get_available_services(office_id)
+            data = {"message": services, "status": "success"}
             return JSONResponse(content=data)
 
     def run(self):

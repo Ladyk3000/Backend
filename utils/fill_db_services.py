@@ -20,6 +20,16 @@ cursor.execute('''
     )
 ''')
 
+cursor.execute('''
+    CREATE TABLE IF NOT EXISTS bank_services (
+        id INTEGER PRIMARY KEY,
+        name TEXT UNIQUE,
+        description TEXT,
+        average_processing_time INTEGER,
+        is_online BOOL
+        )
+''')
+
 categories_data = [
     ("Кредиты",),
     ("Карты",),
