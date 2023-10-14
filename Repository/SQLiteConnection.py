@@ -1,3 +1,4 @@
+import datetime
 import random
 import sqlite3
 
@@ -8,11 +9,26 @@ class SQLiteConnection:
     def __init__(self, database_path):
         self.conn = sqlite3.connect(database_path)
         self.cursor = self.conn.cursor()
+        self.create_reservation_table()
 
-    def create_table(self, table_name, columns):
-        create_table_query = f"CREATE TABLE IF NOT EXISTS {table_name} ({', '.join(columns)})"
-        self.cursor.execute(create_table_query)
-        self.conn.commit()
+    def create_reservation_table(self):
+        try:
+            self.cursor.execute(
+                """
+                CREATE TABLE reservations (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                office_id INTEGER,
+                reservation_date DATE,
+                reservation_time TIME,
+                service_name TEXT,
+                phone_number TEXT,  -- Add a column for phone number
+                notify BOOLEAN
+                );
+                """)
+            self.conn.commit()
+            return "create reservation table"
+        except sqlite3.Error as e:
+            return f"Error adding reservation: {str(e)}"
 
     def get_categories(self):
         select_query = "SELECT name FROM service_categories"
@@ -56,8 +72,8 @@ class SQLiteConnection:
             atms.append(office)
         return atms
 
-    def get_best_office(self, longitude, latitude):
-        closest_offices = self.get_nearest_branches(branch_type='office', longitude=longitude, latitude=latitude)
+    def get_best_office(self, longitude, latitude, k=5):
+        closest_offices = self.get_nearest_branches(branch_type='office', longitude=longitude, latitude=latitude, k=k)
         best_offices = []
         for office_id, distance in closest_offices:
             self.cursor.execute("SELECT id, longitude, latitude, address  FROM bank_offices WHERE id = ?", (office_id,))
@@ -67,7 +83,7 @@ class SQLiteConnection:
                     "id": office[0],
                     "longitude": office[1],
                     "latitude": office[2],
-                    "address": office[2],
+                    "address": office[3],
                     "distance": distance,
                     "load_rate": self.get_load_rate()
                 })
@@ -153,5 +169,84 @@ class SQLiteConnection:
     def get_load_rate():
         return random.randint(1, 9) * 0.1
 
-    def close(self):
-        self.conn.close()
+    def get_reservation_days(self, office_id):
+        today = datetime.date.today()
+
+        reservation_days = []
+        is_saturday_working = self.is_saturday_working(office_id)
+        day_counter = 0
+        while len(reservation_days) < 7:
+            day_counter += 1
+            next_day = today + datetime.timedelta(days=day_counter)
+            if self.is_working_day(next_day, is_saturday_working):
+                reservation_days.append(next_day.isoformat())
+        return reservation_days
+
+    @staticmethod
+    def is_working_day(date, is_saturday_working):
+        if date.weekday() == 6:
+            return False
+        if date.weekday() == 5 and not is_saturday_working:
+            return False
+        return True
+
+    def is_saturday_working(self, office_id):
+        self.cursor.execute(f"SELECT Saturday_schedule FROM bank_offices WHERE id = ?", (office_id,))
+        schedule = self.cursor.fetchone()[0]
+        is_saturday_working = False if schedule in ['выходной', 'Не обслуживает ЮЛ'] else True
+        return is_saturday_working
+
+    def get_time_slots(self, office_id, reservation_date):
+        working_hours = self.get_working_hours(office_id, reservation_date)
+        time_slots = self.generate_time_slots(working_hours)
+        return time_slots
+
+    def get_working_hours(self, office_id, reservation_date):
+        reservation_date = datetime.date.fromisoformat(reservation_date)
+        day_of_week = reservation_date.weekday()
+        days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+        day_name = days[day_of_week]
+        if day_name == 'Friday':
+            day_schedule = 'Friday_Thursday_schedule'
+        elif day_name == 'Saturday':
+            day_schedule = 'Saturday_Thursday_schedule'
+        else:
+            day_schedule = 'Monday_Thursday_schedule'
+        self.cursor.execute(f"SELECT {day_schedule} FROM bank_offices WHERE id = ?", (office_id,))
+        schedule_string = self.cursor.fetchone()[0]
+        start_time_string, end_time_string = schedule_string.split('-')
+        start_time = datetime.time.fromisoformat(start_time_string)
+        end_time = datetime.time.fromisoformat(end_time_string)
+        return [start_time, end_time]
+
+    @staticmethod
+    def generate_time_slots(working_hours, service_time_minutes=15):
+        time_slots = []
+        current_time = datetime.datetime.now().replace(second=0, microsecond=0)
+        current_time = current_time.replace(hour=working_hours[0].hour, minute=working_hours[0].minute)
+
+        while current_time.time() < working_hours[1]:
+            time_slots.append(current_time.time().strftime('%H:%M'))
+            current_time += datetime.timedelta(minutes=service_time_minutes)
+
+        return time_slots
+
+    def add_reservation(self, office_id, reservation_date, reservation_time, service_name, notify=False):
+        try:
+            self.cursor.execute(
+                "INSERT INTO reservations (office_id, reservation_date, reservation_time, service_name, notify) "
+                "VALUES (?, ?, ?, ?, ?)",
+                (office_id, reservation_date, reservation_time, service_name, notify))
+            self.conn.commit()
+            return "Reservation added successfully."
+        except sqlite3.Error as e:
+            return f"Error adding reservation: {str(e)}"
+
+    def add_reservation_notify(self, reservation_id, phone_number):
+        try:
+            self.cursor.execute("UPDATE reservations SET notify = 1, phone_number = ? WHERE id = ?",
+                                (phone_number, reservation_id))
+            self.conn.commit()
+            return "Notification added successfully."
+        except sqlite3.Error as e:
+            return f"Error adding notification: {str(e)}"
