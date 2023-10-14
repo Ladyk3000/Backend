@@ -9,11 +9,26 @@ class SQLiteConnection:
     def __init__(self, database_path):
         self.conn = sqlite3.connect(database_path)
         self.cursor = self.conn.cursor()
+        self.create_reservation_table()
 
-    def create_table(self, table_name, columns):
-        create_table_query = f"CREATE TABLE IF NOT EXISTS {table_name} ({', '.join(columns)})"
-        self.cursor.execute(create_table_query)
-        self.conn.commit()
+    def create_reservation_table(self):
+        try:
+            self.cursor.execute(
+                """
+                CREATE TABLE reservations (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                office_id INTEGER,
+                reservation_date DATE,
+                reservation_time TIME,
+                service_name TEXT,
+                phone_number TEXT,  -- Add a column for phone number
+                notify BOOLEAN
+                );
+                """)
+            self.conn.commit()
+            return "create reservation table"
+        except sqlite3.Error as e:
+            return f"Error adding reservation: {str(e)}"
 
     def get_categories(self):
         select_query = "SELECT name FROM service_categories"
@@ -215,3 +230,23 @@ class SQLiteConnection:
             current_time += datetime.timedelta(minutes=service_time_minutes)
 
         return time_slots
+
+    def add_reservation(self, office_id, reservation_date, reservation_time, service_name, notify=False):
+        try:
+            self.cursor.execute(
+                "INSERT INTO reservations (office_id, reservation_date, reservation_time, service_name, notify) "
+                "VALUES (?, ?, ?, ?, ?)",
+                (office_id, reservation_date, reservation_time, service_name, notify))
+            self.conn.commit()
+            return "Reservation added successfully."
+        except sqlite3.Error as e:
+            return f"Error adding reservation: {str(e)}"
+
+    def add_reservation_notify(self, reservation_id, phone_number):
+        try:
+            self.cursor.execute("UPDATE reservations SET notify = 1, phone_number = ? WHERE id = ?",
+                                (phone_number, reservation_id))
+            self.conn.commit()
+            return "Notification added successfully."
+        except sqlite3.Error as e:
+            return f"Error adding notification: {str(e)}"

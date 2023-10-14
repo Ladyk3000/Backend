@@ -147,10 +147,34 @@ class FastAPIApp:
         @self.app.get('/get-time-slots')
         async def get_time_slots(
                 office_id: int = Query(..., description="Office ID"),
-                reservation_date: str = Query(..., description="Reservation_date"),
+                reservation_date: str = Query(..., description="Reservation date"),
         ):
             time_slots = self.database.get_time_slots(office_id, reservation_date)
             data = {"message": time_slots, "status": "success"}
+            return JSONResponse(content=data)
+
+        @self.app.get('/add-reservation')
+        async def add_reservation(
+                office_id: int = Query(..., description="Office ID"),
+                reservation_date: str = Query(..., description="Reservation date"),
+                reservation_time: str = Query(..., description="Reservation time"),
+                service_name: str = Query(..., description="Service name"),
+        ):
+            reservation_id = self.database.add_reservation(office_id=office_id,
+                                                           reservation_date=reservation_date,
+                                                           reservation_time=reservation_time,
+                                                           service_name=service_name)
+            data = {"message": reservation_id, "status": "success"}
+            return JSONResponse(content=data)
+
+        @self.app.get('/add-reservation-notify')
+        async def add_reservation(
+                reservation_id: int = Query(..., description="Office ID"),
+                phone_number: str = Query(..., description="Service name"),
+        ):
+            self.database.add_reservation_notify(reservation_id=reservation_id,
+                                                 phone_number=phone_number)
+            data = {"status": "success"}
             return JSONResponse(content=data)
 
     def run(self):
