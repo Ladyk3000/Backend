@@ -9,7 +9,7 @@
 
 Схема базы данных сервиса:
 
-![Схема базы данных](https://github.com/Ladyk3000/HackatonBackend/blob/main/Data/Схема%20базы%20данных%20Кириешки.png))
+![Схема базы данных](https://github.com/Ladyk3000/HackatonBackend/blob/main/Data/Схема%20базы%20данных%20Кириешки.png)
 
 ## Функциональность
 
