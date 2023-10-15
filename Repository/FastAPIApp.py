@@ -1,3 +1,7 @@
+import threading
+import time
+from datetime import datetime
+
 from fastapi import FastAPI, Query
 import uvicorn
 import json
@@ -7,14 +11,19 @@ from starlette.responses import JSONResponse
 
 from Repository.BranchManager import BranchManager
 from Repository.PathFinder import PathFinder
+from Repository.ReservationNotifier import ReservationNotifier
 from Repository.SQLiteConnection import SQLiteConnection
 
 
 class FastAPIApp:
-    def __init__(self, branch_manager: BranchManager, database: SQLiteConnection):
+    def __init__(self,
+                 branch_manager: BranchManager,
+                 database: SQLiteConnection,
+                 reservation_notifier: ReservationNotifier):
         self.pathfinder = PathFinder()
         self.branch_manager = branch_manager
         self.database = database
+        self.reservation_notifier = reservation_notifier
         self.app = FastAPI()
         origins = ["*"]
         self.app.add_middleware(
@@ -122,9 +131,9 @@ class FastAPIApp:
                 reservation_id: int = Query(..., description="Reservation ID"),
                 phone_number: str = Query(..., description="Phone number"),
         ):
-            self.database.add_reservation_notify(reservation_id=reservation_id,
-                                                 phone_number=phone_number)
-            data = {"status": "success"}
+            message = self.database.add_reservation_notify(reservation_id=reservation_id,
+                                                           phone_number=phone_number)
+            data = {"message": message, "status": "success"}
             return JSONResponse(content=data)
 
         @self.app.get('/offices')
@@ -210,5 +219,21 @@ class FastAPIApp:
             data = {"message": queue, "status": "success"}
             return JSONResponse(content=data)
 
+    def check_reservations(self):
+        not_checked = True
+        while True:
+            current_time = datetime.now()
+            if current_time.hour == 8 and current_time.minute == 0 and not_checked:
+                self.reservation_notifier.send_daily_reservations()
+                not_checked = False
+
+            if current_time.hour == 0 and current_time.minute == 0:
+                not_checked = True
+
+            time.sleep(5)
+
     def run(self):
+        background_thread = threading.Thread(target=self.check_reservations)
+        background_thread.daemon = True
+        background_thread.start()
         uvicorn.run(self.app, host="0.0.0.0", port=8000)

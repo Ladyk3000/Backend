@@ -29,7 +29,7 @@ class SQLiteConnection:
             self.conn.commit()
             return "create reservation table"
         except sqlite3.Error as e:
-            return f"Error adding reservation: {str(e)}"
+            return f"Error: {str(e)}"
 
     def get_categories(self):
         select_query = "SELECT id, name FROM service_categories"
@@ -275,7 +275,7 @@ class SQLiteConnection:
             reservation_id = self.cursor.lastrowid
             return reservation_id
         except sqlite3.Error as e:
-            return f"Error adding reservation: {str(e)}"
+            return f"Error: {str(e)}"
 
     def add_reservation_notify(self, reservation_id, phone_number):
         try:
@@ -284,7 +284,7 @@ class SQLiteConnection:
             self.conn.commit()
             return "Notification added successfully."
         except sqlite3.Error as e:
-            return f"Error adding notification: {str(e)}"
+            return f"Error: {str(e)}"
 
     def get_branch_data(self, branch_type):
         if branch_type == 'atm':
@@ -298,16 +298,17 @@ class SQLiteConnection:
             data = self.cursor.fetchall()
             return data
         except sqlite3.Error as e:
-            return f"Error adding notification: {str(e)}"
+            return f"Error: {str(e)}"
 
     def get_reservation_data(self, reservation_id):
         try:
-            self.cursor.execute(f"SELECT office_id, reservation_date, reservation_time, service_id, phone_number, notify"
-                                f" FROM reservations WHERE id = {reservation_id}")
+            self.cursor.execute(
+                f"SELECT office_id, reservation_date, reservation_time, service_id, phone_number, notify"
+                f" FROM reservations WHERE id = {reservation_id}")
             data = self.cursor.fetchone()
             return data
         except sqlite3.Error as e:
-            return f"Error adding notification: {str(e)}"
+            return f"Error: {str(e)}"
 
     def get_reservations(self, office_id):
         try:
@@ -315,4 +316,4 @@ class SQLiteConnection:
             data = self.cursor.fetchall()
             return data
         except sqlite3.Error as e:
-            return f"Error adding notification: {str(e)}"
+            return f"Error: {str(e)}"
