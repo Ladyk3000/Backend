@@ -248,7 +248,10 @@ class SQLiteConnection:
             day_schedule = 'Monday_Thursday_schedule'
         self.cursor.execute(f"SELECT {day_schedule} FROM bank_offices WHERE id = ?", (office_id,))
         schedule_string = self.cursor.fetchone()[0]
-        start_time_string, end_time_string = schedule_string.split('-')
+        try:
+            start_time_string, end_time_string = schedule_string.split('-')
+        except ValueError:
+            start_time_string, end_time_string = '09:00', '17:00'
         start_time = datetime.time.fromisoformat(start_time_string)
         end_time = datetime.time.fromisoformat(end_time_string)
         return [start_time, end_time]
