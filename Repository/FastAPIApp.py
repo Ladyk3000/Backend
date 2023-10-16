@@ -232,8 +232,8 @@ class FastAPIApp:
 
             time.sleep(5)
 
-    def run(self):
+    def run(self, host="0.0.0.0", port=8000):
         background_thread = threading.Thread(target=self.check_reservations)
         background_thread.daemon = True
         background_thread.start()
-        uvicorn.run(self.app, host="0.0.0.0", port=8000)
+        uvicorn.run(self.app, host=host, port=port)
