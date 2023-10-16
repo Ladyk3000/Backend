@@ -11,7 +11,7 @@ class SQLiteConnection:
         self.cursor = self.conn.cursor()
         self.create_reservation_table()
 
-    def create_reservation_table(self):
+    def create_reservation_table(self) -> str:
         try:
             self.cursor.execute('''
                     CREATE TABLE IF NOT EXISTS reservations (
@@ -31,7 +31,7 @@ class SQLiteConnection:
         except sqlite3.Error as e:
             return f"Error: {str(e)}"
 
-    def get_categories(self):
+    def get_categories(self) -> list:
         select_query = "SELECT id, name FROM service_categories"
         self.cursor.execute(select_query)
         rows = self.cursor.fetchall()
@@ -44,8 +44,9 @@ class SQLiteConnection:
             categories.append(category)
         return categories
 
-    def get_subcategories(self, category_id):
-        select_query = f"SELECT id, name, category_id FROM service_subcategories WHERE category_id={category_id}"
+    def get_subcategories(self, category_id: int) -> list:
+        select_query = f"SELECT id, name, category_id " \
+                       f"FROM service_subcategories WHERE category_id={category_id}"
         self.cursor.execute(select_query)
         rows = self.cursor.fetchall()
         subcategories = []
@@ -58,8 +59,9 @@ class SQLiteConnection:
             subcategories.append(subcategory)
         return subcategories
 
-    def get_bank_services(self, subcategory_id):
-        select_query = f"SELECT id, name, subcategory_id FROM bank_services WHERE subcategory_id={subcategory_id}"
+    def get_bank_services(self, subcategory_id: int) -> list:
+        select_query = f"SELECT id, name, subcategory_id " \
+                       f"FROM bank_services WHERE subcategory_id={subcategory_id}"
         self.cursor.execute(select_query)
         rows = self.cursor.fetchall()
         services = []
@@ -72,10 +74,17 @@ class SQLiteConnection:
             services.append(service)
         return services
 
-    def get_offices_for_maps(self, longitude_min, latitude_min, longitude_max, latitude_max):
+    def get_offices_for_maps(self,
+                             longitude_min: float,
+                             latitude_min: float,
+                             longitude_max: float,
+                             latitude_max: float) -> list:
         select_query = "SELECT id, latitude, longitude FROM bank_offices " \
                        "WHERE longitude BETWEEN ? AND ? AND latitude BETWEEN ? AND ?"
-        self.cursor.execute(select_query, (longitude_min, longitude_max, latitude_min, latitude_max))
+        self.cursor.execute(select_query, (longitude_min,
+                                           longitude_max,
+                                           latitude_min,
+                                           latitude_max))
         rows = self.cursor.fetchall()
         offices = []
         for row in rows:
@@ -87,10 +96,17 @@ class SQLiteConnection:
             offices.append(office)
         return offices
 
-    def get_atms_for_maps(self, longitude_min, latitude_min, longitude_max, latitude_max):
+    def get_atms_for_maps(self,
+                          longitude_min: float,
+                          latitude_min: float,
+                          longitude_max: float,
+                          latitude_max: float) -> list:
         select_query = "SELECT id, latitude, longitude FROM bank_atms " \
                        "WHERE longitude BETWEEN ? AND ? AND latitude BETWEEN ? AND ?"
-        self.cursor.execute(select_query, (longitude_min, longitude_max, latitude_min, latitude_max))
+        self.cursor.execute(select_query, (longitude_min,
+                                           longitude_max,
+                                           latitude_min,
+                                           latitude_max))
         rows = self.cursor.fetchall()
         atms = []
         for row in rows:
@@ -102,11 +118,15 @@ class SQLiteConnection:
             atms.append(office)
         return atms
 
-    def get_near_offices(self, longitude, latitude, k=5):
-        closest_offices = self.get_nearest_branches(branch_type='office', longitude=longitude, latitude=latitude, k=k)
+    def get_near_offices(self, longitude: float, latitude: float, k: int = 5) -> list:
+        closest_offices = self.get_nearest_branches(branch_type='office',
+                                                    longitude=longitude,
+                                                    latitude=latitude,
+                                                    k=k)
         best_offices = []
         for office_id, distance in closest_offices:
-            self.cursor.execute("SELECT id, longitude, latitude, address  FROM bank_offices WHERE id = ?", (office_id,))
+            self.cursor.execute("SELECT id, longitude, latitude, address "
+                                "FROM bank_offices WHERE id = ?", (office_id,))
             office = self.cursor.fetchone()
             if office:
                 best_offices.append({
@@ -120,11 +140,15 @@ class SQLiteConnection:
 
         return best_offices
 
-    def get_best_atm(self, longitude, latitude):
-        closest_atms = self.get_nearest_branches(branch_type='atm', longitude=longitude, latitude=latitude, k=100)
+    def get_best_atm(self, longitude: float, latitude: float) -> list:
+        closest_atms = self.get_nearest_branches(branch_type='atm',
+                                                 longitude=longitude,
+                                                 latitude=latitude,
+                                                 k=100)
         best_atms = []
         for atm_id, distance in closest_atms:
-            self.cursor.execute("SELECT id, longitude, latitude, address  FROM bank_atms WHERE id = ?", (atm_id,))
+            self.cursor.execute("SELECT id, longitude, latitude, address "
+                                "FROM bank_atms WHERE id = ?", (atm_id,))
             office = self.cursor.fetchone()
             if office:
                 best_atms.append({
@@ -137,7 +161,11 @@ class SQLiteConnection:
 
         return best_atms
 
-    def get_nearest_branches(self, branch_type, latitude, longitude, k=5):
+    def get_nearest_branches(self,
+                             branch_type: str,
+                             latitude: float,
+                             longitude: float,
+                             k: int = 5) -> list:
         if branch_type == 'atm':
             table = 'bank_atms'
         else:
@@ -149,14 +177,20 @@ class SQLiteConnection:
 
         for branch in branches:
             branch_id, branch_longitude, branch_latitude = branch
-            distance = PathFinder.haversine(latitude, longitude, branch_latitude, branch_longitude)
+            distance = PathFinder.haversine(latitude,
+                                            longitude,
+                                            branch_latitude,
+                                            branch_longitude)
             distances.append((branch_id, distance))
 
         distances.sort(key=lambda x: x[1])
         closest_branches = distances[:k]
         return closest_branches
 
-    def get_office_info(self, office_id, longitude, latitude):
+    def get_office_info(self,
+                        office_id: int,
+                        longitude: float,
+                        latitude: float) -> dict:
         office_info = self.get_branch_info(branch_type='office', branch_id=office_id)
         distance = PathFinder.haversine(lat1=latitude,
                                         lon1=longitude,
@@ -167,12 +201,13 @@ class SQLiteConnection:
         office_info['load_rate'] = load_rate
         return office_info
 
-    def get_branch_info(self, branch_type, branch_id):
+    def get_branch_info(self, branch_type: str, branch_id: int) -> dict:
         if branch_type == 'atm':
             table = 'bank_atms'
         else:
             table = 'bank_offices'
-        self.cursor.execute(f"SELECT id, longitude, latitude, address  FROM {table} WHERE id = ?", (branch_id,))
+        self.cursor.execute(f"SELECT id, longitude, latitude, address "
+                            f"FROM {table} WHERE id = ?", (branch_id,))
         branch = self.cursor.fetchone()
         branch_info = None
         if branch:
@@ -187,14 +222,14 @@ class SQLiteConnection:
         return branch_info
 
     @staticmethod
-    def get_load_rate():
+    def get_load_rate() -> float:
         min_value = 10
         max_value = 100
         random_number = np.random.uniform(min_value, max_value, 1)
         random_rating = round(random_number[0] / max_value, 1)
         return random_rating
 
-    def get_atm_info(self, atm_id, longitude, latitude):
+    def get_atm_info(self, atm_id: int, longitude: float, latitude: float) -> dict:
         atm_info = self.get_branch_info(branch_type='atm', branch_id=atm_id)
         distance = PathFinder.haversine(lat1=latitude,
                                         lon1=longitude,
@@ -203,7 +238,7 @@ class SQLiteConnection:
         atm_info['distance'] = distance
         return atm_info
 
-    def get_reservation_days(self, office_id):
+    def get_reservation_days(self, office_id: int) -> list:
         today = datetime.date.today()
 
         reservation_days = []
@@ -217,28 +252,30 @@ class SQLiteConnection:
         return reservation_days
 
     @staticmethod
-    def is_working_day(date, is_saturday_working):
+    def is_working_day(date: datetime.date, is_saturday_working: bool) -> bool:
         if date.weekday() == 6:
             return False
         if date.weekday() == 5 and not is_saturday_working:
             return False
         return True
 
-    def is_saturday_working(self, office_id):
-        self.cursor.execute(f"SELECT Saturday_schedule FROM bank_offices WHERE id = ?", (office_id,))
+    def is_saturday_working(self, office_id: int) -> bool:
+        self.cursor.execute(f"SELECT Saturday_schedule FROM bank_offices WHERE id = ?",
+                            (office_id,))
         schedule = self.cursor.fetchone()[0]
-        is_saturday_working = False if schedule in ['выходной', 'Не обслуживает ЮЛ'] else True
-        return is_saturday_working
+        is_working = False if schedule in ['выходной', 'Не обслуживает ЮЛ'] else True
+        return is_working
 
-    def get_time_slots(self, office_id, reservation_date):
+    def get_time_slots(self, office_id: int, reservation_date: str) -> list[str]:
         working_hours = self.get_working_hours(office_id, reservation_date)
         time_slots = self.generate_time_slots(working_hours)
         return time_slots
 
-    def get_working_hours(self, office_id, reservation_date):
+    def get_working_hours(self, office_id: int, reservation_date: str) -> list[str]:
         reservation_date = datetime.date.fromisoformat(reservation_date)
         day_of_week = reservation_date.weekday()
-        days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+        days = ["Monday", "Tuesday", "Wednesday",
+                "Thursday", "Friday", "Saturday", "Sunday"]
         day_name = days[day_of_week]
         if day_name == 'Friday':
             day_schedule = 'Friday_Thursday_schedule'
@@ -246,7 +283,8 @@ class SQLiteConnection:
             day_schedule = 'Saturday_Thursday_schedule'
         else:
             day_schedule = 'Monday_Thursday_schedule'
-        self.cursor.execute(f"SELECT {day_schedule} FROM bank_offices WHERE id = ?", (office_id,))
+        self.cursor.execute(f"SELECT {day_schedule} FROM bank_offices WHERE id = ?",
+                            (office_id,))
         schedule_string = self.cursor.fetchone()[0]
         try:
             start_time_string, end_time_string = schedule_string.split('-')
@@ -257,18 +295,24 @@ class SQLiteConnection:
         return [start_time, end_time]
 
     @staticmethod
-    def generate_time_slots(working_hours, service_time_minutes=15):
+    def generate_time_slots(working_hours: list,
+                            service_time_minutes: int = 15) -> list:
         time_slots = []
         current_time = datetime.datetime.now().replace(second=0, microsecond=0)
-        current_time = current_time.replace(hour=working_hours[0].hour, minute=working_hours[0].minute)
-
+        current_time = current_time.replace(hour=working_hours[0].hour,
+                                            minute=working_hours[0].minute)
         while current_time.time() < working_hours[1]:
             time_slots.append(current_time.time().strftime('%H:%M'))
             current_time += datetime.timedelta(minutes=service_time_minutes)
 
         return time_slots
 
-    def add_reservation(self, office_id, reservation_date, reservation_time, service_id, notify=False):
+    def add_reservation(self,
+                        office_id: int,
+                        reservation_date: str,
+                        reservation_time: str,
+                        service_id: int,
+                        notify: bool = False) -> int:
         try:
             self.cursor.execute(
                 "INSERT INTO reservations (office_id, reservation_date, reservation_time, service_id, notify) "
@@ -280,7 +324,7 @@ class SQLiteConnection:
         except sqlite3.Error as e:
             return f"Error: {str(e)}"
 
-    def add_reservation_notify(self, reservation_id, phone_number):
+    def add_reservation_notify(self, reservation_id: int, phone_number: str) -> str:
         try:
             self.cursor.execute("UPDATE reservations SET notify = 1, phone_number = ? WHERE id = ?",
                                 (phone_number, reservation_id))
@@ -289,7 +333,7 @@ class SQLiteConnection:
         except sqlite3.Error as e:
             return f"Error: {str(e)}"
 
-    def get_branch_data(self, branch_type):
+    def get_branch_data(self, branch_type: str) -> list:
         if branch_type == 'atm':
             table = 'bank_atms'
             columns = 'id, address, latitude, longitude'
@@ -303,7 +347,7 @@ class SQLiteConnection:
         except sqlite3.Error as e:
             return f"Error: {str(e)}"
 
-    def get_reservation_data(self, reservation_id):
+    def get_reservation_data(self, reservation_id: int) -> tuple:
         try:
             self.cursor.execute(
                 f"SELECT office_id, reservation_date, reservation_time, service_id, phone_number, notify"
@@ -313,7 +357,7 @@ class SQLiteConnection:
         except sqlite3.Error as e:
             return f"Error: {str(e)}"
 
-    def get_reservations(self, office_id):
+    def get_reservations(self, office_id: int) -> list:
         try:
             self.cursor.execute(f"SELECT id FROM reservations WHERE office_id = {office_id}")
             data = self.cursor.fetchall()

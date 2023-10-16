@@ -5,7 +5,13 @@ from Entities.BankingService import BankingService
 
 
 class BankOffice:
-    def __init__(self, database, id_, name, post_index, address, latitude, longitude):
+    def __init__(self,
+                 database, id_: int,
+                 name: str,
+                 post_index: str,
+                 address: str,
+                 latitude: float,
+                 longitude: float):
         self.database = database
         self.id = id_
         self.name = name
@@ -19,7 +25,7 @@ class BankOffice:
         self.provided_services = self.get_services()
         self.digital_queue = deque(maxlen=160)
 
-    def get_load_rate(self):
+    def get_load_rate(self) -> float:
         digital_queue_score = self.get_digital_queue_score()
         smart_cam_score = self.get_smart_cam_score()
         digital_queue_weight = 0.8
@@ -28,14 +34,14 @@ class BankOffice:
         return load_rate
 
     @staticmethod
-    def get_digital_queue_score():
+    def get_digital_queue_score() -> float:
         min_wait_minutes = 3
         max_wait_minutes = 10
         mean_wait_time_per_hour = float(np.random.uniform(min_wait_minutes, max_wait_minutes, 1))
         return round(mean_wait_time_per_hour / max_wait_minutes, 2)
 
     @staticmethod
-    def get_smart_cam_score(threshold=0.8):
+    def get_smart_cam_score(threshold: float = 0.8) -> float:
         capacity = 100
         people_income_per_hour = np.random.uniform(50, 150, 1)
         people_outcome_per_hour = np.random.uniform(50, 150, 1)
@@ -44,23 +50,23 @@ class BankOffice:
         return round(load_coefficient, 2)
 
     @staticmethod
-    def get_rating():
+    def get_rating() -> float:
         min_value = 35
         max_value = 50
         random_number = np.random.uniform(min_value, max_value, 1)
         random_rating = round(random_number[0] / 10, 1)
         return random_rating
 
-    def get_services(self):
+    def get_services(self) -> list[dict]:
         select_query = f"SELECT id, name, description, average_processing_time, is_online FROM bank_services"
         self.database.cursor.execute(select_query)
         data = self.database.cursor.fetchall()
         return [asdict(BankingService(*row)) for row in data]
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return str(self.__dict__)
 
-    def as_dict(self):
+    def as_dict(self) -> dict:
         self_d = {
             "id": self.id,
             "name": self.name,
