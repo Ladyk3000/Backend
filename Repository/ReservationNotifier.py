@@ -1,8 +1,9 @@
 import sqlite3
 from datetime import datetime
 
+
 class ReservationNotifier:
-    def __init__(self, database_path, emulate_sms=True):
+    def __init__(self, database_path: str, emulate_sms: bool = True):
         self.database_path = database_path
         self.emulate_sms = emulate_sms
 
@@ -18,7 +19,7 @@ class ReservationNotifier:
                     self.send_sms(phone_number, message)
 
     @staticmethod
-    def get_day_reservations(cursor):
+    def get_day_reservations(cursor) -> list:
         current_date = datetime.now().date()
         cursor.execute('''
             SELECT id, phone_number, reservation_time
@@ -28,6 +29,6 @@ class ReservationNotifier:
         reservations = cursor.fetchall()
         return reservations
 
-    def send_sms(self, receiver_number, message):
+    def send_sms(self, receiver_number: str, message: str):
         if self.emulate_sms:
             print(f"Эмулированная отправка SMS на номер {receiver_number}: {message}")

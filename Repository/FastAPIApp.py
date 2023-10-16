@@ -35,8 +35,9 @@ class FastAPIApp:
         )
 
         @self.app.get('/')
-        async def get_home():
-            return {'all': 'ok'}
+        async def get_home() -> JSONResponse:
+            data = {"message": "OK", "status": "success"}
+            return JSONResponse(content=data)
 
         @self.app.get('/offices-for-maps')
         async def get_offices_for_maps(
@@ -44,7 +45,7 @@ class FastAPIApp:
                 latitude_min: float = Query(..., description="Minimum latitude"),
                 longitude_max: float = Query(..., description="Maximum longitude"),
                 latitude_max: float = Query(..., description="Maximum latitude")
-        ):
+        ) -> JSONResponse:
             offices_for_maps = self.database.get_offices_for_maps(longitude_min=longitude_min,
                                                                   latitude_min=latitude_min,
                                                                   longitude_max=longitude_max,
@@ -58,7 +59,7 @@ class FastAPIApp:
                 latitude_min: float = Query(..., description="Minimum latitude"),
                 longitude_max: float = Query(..., description="Maximum longitude"),
                 latitude_max: float = Query(..., description="Maximum latitude")
-        ):
+        ) -> JSONResponse:
             atms_for_maps = self.database.get_atms_for_maps(longitude_min=longitude_min,
                                                             latitude_min=latitude_min,
                                                             longitude_max=longitude_max,
@@ -67,19 +68,19 @@ class FastAPIApp:
             return JSONResponse(content=data)
 
         @self.app.get('/categories')
-        async def get_categories():
+        async def get_categories() -> JSONResponse:
             categories = self.database.get_categories()
             data = {"message": categories, "status": "success"}
             return JSONResponse(content=data)
 
         @self.app.get('/subcategories')
-        async def get_subcategories(category_id: int = Query(..., title="Category ID")):
+        async def get_subcategories(category_id: int = Query(..., title="Category ID")) -> JSONResponse:
             subcategories = self.database.get_subcategories(category_id)
             data = {"message": subcategories, "status": "success"}
             return JSONResponse(content=data)
 
         @self.app.get('/services')
-        async def get_bank_services(subcategory_id: int = Query(..., title="Category ID")):
+        async def get_bank_services(subcategory_id: int = Query(..., title="Category ID")) -> JSONResponse:
             bank_services = self.database.get_bank_services(subcategory_id)
             data = {"message": bank_services, "status": "success"}
             return JSONResponse(content=data)
@@ -89,7 +90,7 @@ class FastAPIApp:
                 service_id: str = Query(..., description="Service ID"),
                 longitude: float = Query(..., description="Longitude"),
                 latitude: float = Query(..., description="Latitude")
-        ):
+        ) -> JSONResponse:
             offices = self.branch_manager.get_available_near_offices(service_id=service_id,
                                                                      longitude=longitude,
                                                                      latitude=latitude)
@@ -97,7 +98,7 @@ class FastAPIApp:
             return JSONResponse(content=data)
 
         @self.app.get('/get-days')
-        async def get_days_for_reservation(office_id: int = Query(..., description="Office ID")):
+        async def get_days_for_reservation(office_id: int = Query(..., description="Office ID")) -> JSONResponse:
             days = self.database.get_reservation_days(office_id)
             data = {"message": days, "status": "success"}
             return JSONResponse(content=data)
@@ -106,7 +107,7 @@ class FastAPIApp:
         async def get_time_slots(
                 office_id: int = Query(..., description="Office ID"),
                 reservation_date: str = Query(..., description="Reservation date"),
-        ):
+        ) -> JSONResponse:
             time_slots = self.database.get_time_slots(office_id, reservation_date)
             data = {"message": time_slots, "status": "success"}
             return JSONResponse(content=data)
@@ -117,7 +118,7 @@ class FastAPIApp:
                 reservation_date: str = Query(..., description="Reservation date"),
                 reservation_time: str = Query(..., description="Reservation time"),
                 service_id: int = Query(..., description="Service ID"),
-        ):
+        ) -> JSONResponse:
             reservation_id = self.database.add_reservation(office_id=office_id,
                                                            reservation_date=reservation_date,
                                                            reservation_time=reservation_time,
@@ -130,14 +131,14 @@ class FastAPIApp:
         async def add_reservation(
                 reservation_id: int = Query(..., description="Reservation ID"),
                 phone_number: str = Query(..., description="Phone number"),
-        ):
+        ) -> JSONResponse:
             message = self.database.add_reservation_notify(reservation_id=reservation_id,
                                                            phone_number=phone_number)
             data = {"message": message, "status": "success"}
             return JSONResponse(content=data)
 
         @self.app.get('/offices')
-        async def get_offices():
+        async def get_offices() -> JSONResponse:
             with open('Data/offices.txt', 'r', encoding='utf-8') as file:
                 data = file.read()
             offices = json.loads(data)
@@ -145,7 +146,7 @@ class FastAPIApp:
             return JSONResponse(content=data)
 
         @self.app.get('/atms')
-        async def get_atms():
+        async def get_atms() -> JSONResponse:
             with open('Data/atms.txt', 'r', encoding='utf-8') as file:
                 data = file.read()
             atms = json.loads(data)
@@ -157,7 +158,7 @@ class FastAPIApp:
                 office_id: int = Query(..., description="Office ID"),
                 longitude: float = Query(..., description="Longitude"),
                 latitude: float = Query(..., description="Latitude")
-        ):
+        ) -> JSONResponse:
             office_info = self.database.get_office_info(office_id=office_id,
                                                         latitude=latitude,
                                                         longitude=longitude)
@@ -169,7 +170,7 @@ class FastAPIApp:
                 atm_id: int = Query(..., description="ATM ID"),
                 longitude: float = Query(..., description="Longitude"),
                 latitude: float = Query(..., description="Latitude")
-        ):
+        ) -> JSONResponse:
             office_info = self.database.get_atm_info(atm_id=atm_id,
                                                      latitude=latitude,
                                                      longitude=longitude)
@@ -180,7 +181,7 @@ class FastAPIApp:
         async def get_near_offices(
                 longitude: float = Query(..., description="Longitude"),
                 latitude: float = Query(..., description="Latitude")
-        ):
+        ) -> JSONResponse:
             office = self.database.get_near_offices(longitude=longitude,
                                                     latitude=latitude,
                                                     k=10)
@@ -191,7 +192,7 @@ class FastAPIApp:
         async def get_suitable_office(
                 longitude: float = Query(..., description="Longitude"),
                 latitude: float = Query(..., description="Latitude")
-        ):
+        ) -> JSONResponse:
             office = self.branch_manager.get_best_office(longitude=longitude,
                                                          latitude=latitude)
             data = {"message": office, "status": "success"}
@@ -201,20 +202,20 @@ class FastAPIApp:
         async def get_suitable_atm(
                 longitude: float = Query(..., description="Longitude"),
                 latitude: float = Query(..., description="Latitude")
-        ):
+        ) -> JSONResponse:
             atm = self.database.get_best_atm(longitude=longitude,
                                              latitude=latitude)
             data = {"message": atm, "status": "success"}
             return JSONResponse(content=data)
 
         @self.app.get('/available-services')
-        async def available_services(office_id: int = Query(..., description="Office ID")):
+        async def available_services(office_id: int = Query(..., description="Office ID")) -> JSONResponse:
             services = self.branch_manager.get_available_services(office_id)
             data = {"message": services, "status": "success"}
             return JSONResponse(content=data)
 
         @self.app.get('/digital-queue')
-        async def digital_queue(office_id: int = Query(..., description="Office ID")):
+        async def digital_queue(office_id: int = Query(..., description="Office ID")) -> JSONResponse:
             queue = self.branch_manager.get_digital_queue(office_id)
             data = {"message": queue, "status": "success"}
             return JSONResponse(content=data)
@@ -232,7 +233,7 @@ class FastAPIApp:
 
             time.sleep(5)
 
-    def run(self, host="0.0.0.0", port=8000):
+    def run(self, host: str = "0.0.0.0", port: int = 8000):
         background_thread = threading.Thread(target=self.check_reservations)
         background_thread.daemon = True
         background_thread.start()

@@ -3,7 +3,7 @@ import math
 
 class PathFinder:
     @staticmethod
-    def haversine(lat1, lon1, lat2, lon2):
+    def haversine(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
         radius = 6371.0
         lat1 = math.radians(lat1)
         lon1 = math.radians(lon1)
